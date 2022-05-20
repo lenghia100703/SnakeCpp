@@ -9,6 +9,7 @@ using namespace std;
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *backgroud_img = NULL;
+SDL_Texture *endgame_img = NULL;
 const string TITLE = "Snake";
 const int WIDTH = 500;
 const int HEIGHT = 500;
@@ -22,6 +23,8 @@ void mainGame(); // màn hình chơi game
 void startGame(); // màn hình bắt đầu
 bool clickMenu(); // bắt sự kiện click ở màn hình bắt đầu
 void renderTexture(SDL_Texture *img, int startX, int startY, int width, int height); //hàm render ảnh
+void endGame();
+bool clickEndMenu();
 
 class food{
 public:
@@ -156,8 +159,8 @@ bool init() {
 bool loadImage(){
     bool success = 1;
     backgroud_img = loadTexture("C:/Users/dell/Downloads/menuGame.bmp");
-
-    if (backgroud_img == NULL) {
+    endgame_img = loadTexture("C:/Users/dell/Downloads/restart.jpg");
+    if (backgroud_img == NULL || endgame_img == NULL) {
         cout << "Load fail\n";
         success = 0;
     }
@@ -169,6 +172,7 @@ void close() {
 	SDL_DestroyWindow(window);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyTexture(backgroud_img);
+	SDL_DestroyTexture(endgame_img);
 	IMG_Quit();
 	SDL_Quit();
 }
@@ -205,7 +209,31 @@ void startGame(){
     SDL_RenderClear(renderer);
     renderTexture(backgroud_img, renderer, 0, 0, 500, 500);
     SDL_RenderPresent(renderer);
+}
 
+bool clickEndMenu(){
+    SDL_Event e;
+    while (true){
+        while(SDL_PollEvent(&e) != 0) {
+			if(e.type == SDL_QUIT) {
+				close();
+				exit(0);
+			} else if(e.type == SDL_MOUSEBUTTONDOWN) {
+                if (e.button.x >= 203 && e.button.x <= 298 && e.button.y >= 264 && e.button.y <= 284) {
+                    return true;
+                }
+			}
+		}
+    }
+}
+
+void endGame(){
+    SDL_RenderClear(renderer);
+    renderTexture(endgame_img, renderer, 125, 187, 250, 125);
+    SDL_RenderPresent(renderer);
+    if (clickEndMenu() == true){
+        mainGame();
+    }
 }
 
 void mainGame() {
@@ -254,9 +282,13 @@ void mainGame() {
 
         // kiểm tra chết
         if (mySnake.checkDie() == false){
-            close();
-            exit(0);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            endGame();
+
         }
+
+
+
 
         // ăn thức ăn
         if (mySnake.eatFood(myFood) == true) {
@@ -282,12 +314,11 @@ void mainGame() {
     }
 
     close();
-
-
-
 }
 
-bool clickMenu(){
+
+
+bool clickStartMenu(){
     SDL_Event e;
     while (true){
         while(SDL_PollEvent(&e) != 0) {
@@ -314,9 +345,11 @@ int main(int argc, char *argv[]) {
     if (init())
     {
         startGame();
-        if (clickMenu() == true){
+
+        if (clickStartMenu() == true){
             mainGame();
         }
+
         close();
     }
 	return 0;
