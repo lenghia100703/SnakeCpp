@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <deque>
 #include <string>
 
@@ -10,10 +11,17 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *backgroud_img = NULL;
 SDL_Texture *endgame_img = NULL;
+TTF_Font* font = NULL;
+SDL_Surface* surface = NULL;
+SDL_Texture* texture = NULL;
+
 const string TITLE = "Snake";
 const int WIDTH = 500;
 const int HEIGHT = 500;
 const int jump = 25;
+int score = 0;
+int speed = 10;
+
 
 SDL_Texture *loadTexture(string path);
 bool init(); //hàm khởi tạo màn hình và bút vẽ
@@ -23,18 +31,18 @@ void mainGame(); // màn hình chơi game
 void startGame(); // màn hình bắt đầu
 bool clickMenu(); // bắt sự kiện click ở màn hình bắt đầu
 void renderTexture(SDL_Texture *img, int startX, int startY, int width, int height); //hàm render ảnh
-void endGame();
-bool clickEndMenu();
+void endGame(); // màn hình khi rắn chết
+void renderText(); // hàm xuất điểm số ra màn hình
 
 class food{
 public:
 
     int randomX(){
-        return (rand() % (WIDTH/25))*25;
+        return (rand() % ((WIDTH - 25)/25))*25;
     }
 
     int randomY(){
-        return (rand() % (HEIGHT/25))*25;
+        return (rand() % ((HEIGHT - 25)/25))*25;
     }
 
     void newPoint(){
@@ -58,7 +66,8 @@ class snake{
 public:
     int x = 250;
     int y = 250;
-    int speed = 10;
+
+
     int x_before = x;
     int y_before = y;
     int sizeSnake = 2;
@@ -122,6 +131,7 @@ public:
         if (x == f.getX() && y == f.getY()){
             sizeSnake++;
             speed ++;
+            score ++;
             bodyUpdate(1);
             return true;
         }
@@ -153,6 +163,11 @@ bool init() {
 		cout << "Can't load image, there's something missing\n";
 		return 0;
 	}
+	if (TTF_Init() < 0)
+    {
+        SDL_Log("%s", TTF_GetError());
+        return 0;
+    }
 	return 1;
 }
 
@@ -173,6 +188,10 @@ void close() {
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyTexture(backgroud_img);
 	SDL_DestroyTexture(endgame_img);
+	SDL_DestroyTexture(texture);
+
+
+	TTF_Quit();
 	IMG_Quit();
 	SDL_Quit();
 }
@@ -192,8 +211,7 @@ SDL_Texture *loadTexture(string path) {
 	return tmp;
 }
 
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h)
-{
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h){
     //Thiết lập hình chữ nhật đích mà chúng ta muốn vẽ ảnh vào trong
     SDL_Rect dst;
     dst.x = x;
@@ -211,36 +229,68 @@ void startGame(){
     SDL_RenderPresent(renderer);
 }
 
-bool clickEndMenu(){
-    SDL_Event e;
-    while (true){
-        while(SDL_PollEvent(&e) != 0) {
-			if(e.type == SDL_QUIT) {
+void renderText(){
+    font = TTF_OpenFont("C:/Users/dell/Downloads/pixeled/Pixeled.ttf", 30);
+
+    SDL_Color fg = { 243, 156, 18 };
+    SDL_Event eventRestart;
+
+    std::string text = "Your Score: " + to_string(score);
+    surface = TTF_RenderText_Solid(font, text.c_str(), fg);
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    SDL_Rect srcRest;
+    SDL_Rect desRect;
+    TTF_SizeText(font, text.c_str(), &srcRest.w, &srcRest.h);
+
+    srcRest.x = 0;
+    srcRest.y =  0;
+
+    desRect.x = 175;
+    desRect.y = 175;
+    desRect.w = 150;
+    desRect.h = 75;
+
+    //set background color
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    //main loop
+    bool isRunning = true;
+    while (isRunning)
+    {
+        //main event
+        while (SDL_PollEvent(&eventRestart) != 0)
+        {
+            if(eventRestart.type == SDL_QUIT) {
 				close();
 				exit(0);
-			} else if(e.type == SDL_MOUSEBUTTONDOWN) {
-                if (e.button.x >= 203 && e.button.x <= 298 && e.button.y >= 264 && e.button.y <= 284) {
-                    return true;
+			} else if(eventRestart.type == SDL_MOUSEBUTTONDOWN) {
+                if (eventRestart.button.x >= 203 && eventRestart.button.x <= 298 && eventRestart.button.y >= 264 && eventRestart.button.y <= 284) {
+                    score = 0;
+                    speed = 10;
+                    mainGame();
                 }
 			}
-		}
+        }
+
+        SDL_RenderCopy(renderer, texture, &srcRest, &desRect);
+        SDL_RenderPresent(renderer);
     }
+    close();
+
 }
 
 void endGame(){
     SDL_RenderClear(renderer);
     renderTexture(endgame_img, renderer, 125, 187, 250, 125);
+    renderText();
     SDL_RenderPresent(renderer);
-    if (clickEndMenu() == true){
-        mainGame();
-    }
 }
 
 void mainGame() {
 	SDL_RenderClear(renderer);
-
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_Event e;
+
     snake mySnake;
     food myFood;
     char key = 'r';
@@ -284,11 +334,7 @@ void mainGame() {
         if (mySnake.checkDie() == false){
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             endGame();
-
         }
-
-
-
 
         // ăn thức ăn
         if (mySnake.eatFood(myFood) == true) {
@@ -310,36 +356,32 @@ void mainGame() {
         }
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(1250/mySnake.speed);
+        SDL_Delay(1400/speed);
     }
 
     close();
 }
 
-
-
 bool clickStartMenu(){
-    SDL_Event e;
+    SDL_Event eventStart;
     while (true){
-        while(SDL_PollEvent(&e) != 0) {
-			if(e.type == SDL_QUIT) {
+        while(SDL_PollEvent(&eventStart) != 0) {
+			if(eventStart.type == SDL_QUIT) {
 				close();
 				exit(0);
-			} else if(e.type == SDL_MOUSEBUTTONDOWN) {
+			} else if(eventStart.type == SDL_MOUSEBUTTONDOWN) {
 				//cout << e.button.x << " " << e.button.y << "\n";
-                if (e.button.x >= 189 && e.button.x <= 305 && e.button.y >= 267 && e.button.y <= 319) {
+                if (eventStart.button.x >= 189 && eventStart.button.x <= 305 && eventStart.button.y >= 267 && eventStart.button.y <= 319) {
                     return true;
                 }
-                if (e.button.x >= 194 && e.button.x <= 299 && e.button.y >= 331 && e.button.y <= 372)  {
+                if (eventStart.button.x >= 194 && eventStart.button.x <= 299 && eventStart.button.y >= 331 && eventStart.button.y <= 372)  {
                     close();
                     exit(0);
                 }
 			}
 		}
     }
-
 }
-
 
 int main(int argc, char *argv[]) {
     if (init())
