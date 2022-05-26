@@ -22,10 +22,10 @@ const int jump = 25;
 int score = 0;
 int speed = 10;
 
-
 SDL_Texture *loadTexture(string path);
 bool init(); //hàm khởi tạo màn hình và bút vẽ
 bool loadImage(); // hàm load ảnh
+bool loadMusic(); // hàm load âm thanh
 void close(); // hàm giải phóng bộ nhớ
 void mainGame(); // màn hình chơi game
 void startGame(); // màn hình bắt đầu
@@ -83,7 +83,7 @@ public:
         bodyY.push_front(250);
     }
 
-    int bodyUpdate(int type){
+    void bodyUpdate(int type){
         bodyX.push_front(x_before);
         bodyY.push_front(y_before);
         if (type == 0){
@@ -173,15 +173,16 @@ bool init() {
 
 bool loadImage(){
     bool success = 1;
-    backgroud_img = loadTexture("C:/Users/dell/Downloads/menuGame.bmp");
-    endgame_img = loadTexture("C:/Users/dell/Downloads/restart.jpg");
+    backgroud_img = loadTexture("menuGame.bmp");
+    endgame_img = loadTexture("endGame.jpg");
     if (backgroud_img == NULL || endgame_img == NULL) {
         cout << "Load fail\n";
         success = 0;
     }
-
     return success;
 }
+
+
 
 void close() {
 	SDL_DestroyWindow(window);
@@ -189,7 +190,6 @@ void close() {
 	SDL_DestroyTexture(backgroud_img);
 	SDL_DestroyTexture(endgame_img);
 	SDL_DestroyTexture(texture);
-
 
 	TTF_Quit();
 	IMG_Quit();
@@ -230,7 +230,7 @@ void startGame(){
 }
 
 void renderText(){
-    font = TTF_OpenFont("C:/Users/dell/Downloads/pixeled/Pixeled.ttf", 30);
+    font = TTF_OpenFont("Pixeled.ttf", 30);
 
     SDL_Color fg = { 243, 156, 18 };
     SDL_Event eventRestart;
@@ -265,10 +265,13 @@ void renderText(){
 				close();
 				exit(0);
 			} else if(eventRestart.type == SDL_MOUSEBUTTONDOWN) {
-                if (eventRestart.button.x >= 203 && eventRestart.button.x <= 298 && eventRestart.button.y >= 264 && eventRestart.button.y <= 284) {
+                if (eventRestart.button.x >= 153 && eventRestart.button.x <= 223 && eventRestart.button.y >= 256 && eventRestart.button.y <= 284) {
                     score = 0;
                     speed = 10;
                     mainGame();
+                }
+                if (eventRestart.button.x >= 292 && eventRestart.button.x <= 348 && eventRestart.button.y >= 256 && eventRestart.button.y <= 284) {
+                    exit(0);
                 }
 			}
         }
@@ -280,6 +283,8 @@ void renderText(){
 
 }
 
+
+
 void endGame(){
     SDL_RenderClear(renderer);
     renderTexture(endgame_img, renderer, 125, 187, 250, 125);
@@ -290,7 +295,7 @@ void endGame(){
 void mainGame() {
 	SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-
+    SDL_Event e;
     snake mySnake;
     food myFood;
     char key = 'r';
@@ -370,7 +375,6 @@ bool clickStartMenu(){
 				close();
 				exit(0);
 			} else if(eventStart.type == SDL_MOUSEBUTTONDOWN) {
-				//cout << e.button.x << " " << e.button.y << "\n";
                 if (eventStart.button.x >= 189 && eventStart.button.x <= 305 && eventStart.button.y >= 267 && eventStart.button.y <= 319) {
                     return true;
                 }
@@ -387,11 +391,10 @@ int main(int argc, char *argv[]) {
     if (init())
     {
         startGame();
-
         if (clickStartMenu() == true){
+
             mainGame();
         }
-
         close();
     }
 	return 0;
